@@ -1,25 +1,24 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"pizarria-golang/models"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
+var pizzas []models.Pizza
+
 func main() {
+	loadPizzas()
 	router := gin.Default()
 	router.GET("/pizzas", getPizzas)
 	router.POST("/pizzas", postPizzas)
 	router.GET("/pizzas/:id", getPizzasByID)
 	router.Run()
-}
-
-var pizzas = []models.Pizza{
-	{ID: 1, Nome: "Toscana", Preco: 50.2},
-	{ID: 2, Nome: "Marguerita", Preco: 90.9},
-	{ID: 3, Nome: "Atum com queijo", Preco: 100},
 }
 
 func getPizzas(c *gin.Context) {
@@ -35,7 +34,11 @@ func postPizzas(c *gin.Context) {
 			"erro": err.Error()})
 		return
 	}
+
+	newPizza.ID = len(pizzas) + 1
 	pizzas = append(pizzas, newPizza)
+	savePizza()
+	c.JSON(201, newPizza)
 }
 
 func getPizzasByID(c *gin.Context) {
@@ -57,4 +60,37 @@ func getPizzasByID(c *gin.Context) {
 
 	c.JSON(404, gin.H{
 		"message": "Pizza not found"})
+}
+
+func loadPizzas() {
+	file, err := os.Open("dados/pizzas.json")
+
+	if err != nil {
+		fmt.Println("Error file:", err)
+		return
+	}
+
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&pizzas); err != nil {
+		fmt.Println("Error decoding JSON: ", err)
+	}
+}
+
+func savePizza() {
+	file, err := os.Create("dados/pizzas.json")
+
+	if err != nil {
+		fmt.Println("Error file:", err)
+		return
+	}
+
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(pizzas); err != nil {
+		fmt.Println("Error enconding JSON: ", err)
+	}
+
 }
